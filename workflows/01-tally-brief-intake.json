@@ -1,0 +1,184 @@
+{
+  "name": "Client intake · Tally brief → table + e-mail",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "client-intake-brief",
+        "options": {
+          "noResponseBody": true
+        }
+      },
+      "id": "dbd6cc7a-af4c-4500-b7a3-1e4bc5fffd94",
+      "name": "Tally Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "744a705f-22dd-4b37-8bbf-5bccef99e864"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "\nconst body = $json.body || {};\nconst data = body.data || {};\nconst fields = Array.isArray(data.fields) ? data.fields : [];\n\n// Question title prefix (Ukrainian form) -> English column key.\n// Edit the left side to match your own Tally question titles.\nconst MAP = [\n  ['У якій сфері', 'industry'],\n  ['Як до вас звертатися', 'name'],\n  ['E-mail для відповіді', 'email'],\n  ['Назва компанії', 'company'],\n  ['Сайт або сторінка', 'website'],\n  ['Скільки людей працює', 'team_size'],\n  ['Хто зараз обробляє', 'lead_handler'],\n  ['Звідки приходять заявки', 'lead_sources'],\n  ['Скільки заявок', 'lead_volume'],\n  ['Що хочете покращити', 'goals'],\n  ['Якими системами', 'systems'],\n  ['Яка саме CRM', 'other_crm'],\n  ['Опишіть задачу', 'task_description'],\n  ['Що відбувається після', 'process_steps'],\n  ['Де зараз зберігаються', 'data_storage'],\n  ['Які готові рішення', 'interest_solutions'],\n  ['Який формат співпраці', 'interest_package'],\n  ['Коли хочете запустити', 'timeline'],\n  ['Якою мовою', 'contact_language'],\n  ['Як вам зручніше отримати', 'response_format'],\n  ['Де вам зручно поговорити', 'call_channel'],\n  ['Номер телефону', 'call_contact'],\n  ['Коли вам зручно', 'call_time'],\n  ['Як ви про нас', 'referral'],\n  ['Згода на обробку', 'consent'],\n];\n// Tally hidden fields, passed from the page URL (?page=...&utm_source=...)\nconst HIDDEN = ['lang', 'page', 'format', 'package', 'readiness', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content'];\n// Industries outside the studio focus get a polite \"thanks\" screen in Tally and are flagged here\nconst EXCLUDED_INDUSTRY_PREFIX = 'Бухгалтерія';\n\nfunction toText(f) {\n  let v = f.value;\n  if (v === null || v === undefined) return '';\n  if (Array.isArray(v)) {\n    const opts = Array.isArray(f.options) ? f.options : [];\n    return v.map(x => {\n      const o = opts.find(o => o.id === x);\n      return o ? o.text : String(x);\n    }).join('; ');\n  }\n  return String(v);\n}\n\nconst out = {};\nfor (const f of fields) {\n  const label = String(f.label || '').trim();\n  if (typeof f.value === 'boolean') continue;\n  if (HIDDEN.includes(label)) { out[label] = toText(f); continue; }\n  const m = MAP.find(([p]) => label.startsWith(p));\n  if (!m) continue;\n  const key = m[1];\n  if (out[key] !== undefined) continue;\n  out[key] = toText(f);\n}\n\nconst row = {\n  submitted_at: data.createdAt || body.createdAt || new Date().toISOString(),\n  response_id: data.responseId || data.submissionId || '',\n  excluded: String(out.industry || '').startsWith(EXCLUDED_INDUSTRY_PREFIX),\n  consent: Boolean(out.consent && out.consent.length),\n  raw_json: JSON.stringify(body),\n};\nfor (const [, key] of MAP) if (key !== 'consent') row[key] = out[key] || '';\nfor (const h of HIDDEN) row[h] = out[h] || '';\n\nreturn { json: row };\n"
+      },
+      "id": "00cecc89-6667-4a39-be41-7aa6776a3bd2",
+      "name": "Normalize Tally Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_DATA_TABLE_ID",
+          "cachedResultName": "client_briefs"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "83ad8e3c-1485-480d-8858-c7424807b3a2",
+      "name": "Store Brief",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "briefs"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "e51bed4b-c6cd-4083-9818-aaa0fc55b100",
+      "name": "Append row in sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "team@example.com",
+        "subject": "={{ (() => { const n = $('Normalize Tally Fields').item.json; return (n.excluded ? '[Бриф · галузь поза фокусом] ' : 'Новий бриф: ') + (n.name || '—') + ' · ' + (n.company || '—') + (n.response_format ? ' · ' + n.response_format : ''); })() }}",
+        "emailType": "text",
+        "message": "={{ (() => { const n = $('Normalize Tally Fields').item.json; const L = [['Джерело (UTM)','utm'],['Сфера','industry'],['Імʼя','name'],['E-mail','email'],['Компанія','company'],['Сайт','website'],['Команда','team_size'],['Хто обробляє заявки','lead_handler'],['Джерела заявок','lead_sources'],['Заявок на місяць','lead_volume'],['Що покращити','goals'],['Системи','systems'],['Інша CRM','other_crm'],['Задача','task_description'],['Після звернення','process_steps'],['Де дані','data_storage'],['Рішення','interest_solutions'],['Формат співпраці','interest_package'],['Строки','timeline'],['Мова спілкування','contact_language'],['Формат відповіді','response_format'],['Канал дзвінка','call_channel'],['Контакт для дзвінка','call_contact'],['Зручний час','call_time'],['Як дізналися','referral'],['Згода','consent'],['Сторінка сайту (page)','page'],['Самооцінка (readiness)','readiness'],['format / package з кнопки','format']]; const lines = L.map(([t,k]) => { let v = n[k]; if (k === 'consent') v = v ? 'так' : 'ні'; if (k === 'format') v = [n.format, n.package].filter(Boolean).join(' / '); if (k === 'utm') v = [n.utm_source, n.utm_medium, n.utm_campaign, n.utm_content].filter(Boolean).join(' / '); return v === '' || v === undefined || v === null ? null : t + ': ' + v; }).filter(Boolean); return 'Нова відповідь у брифі Tally (UA), ' + n.submitted_at + '\\n' + (n.excluded ? 'Галузь поза фокусом студії — клієнт бачив екран «Дякуємо за інтерес».\\n' : '') + '\\n' + lines.join('\\n') + '\\n\\nУсі відповіді: n8n → Data tables → client_briefs (response_id ' + n.response_id + ').'; })() }}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Client brief",
+          "replyTo": "={{ $('Normalize Tally Fields').item.json.email || 'team@example.com' }}"
+        }
+      },
+      "id": "80e65e7d-2687-440a-981e-311fdeb7f713",
+      "name": "Notify team inbox",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        736,
+        -48
+      ],
+      "webhookId": "2f80a495-8344-4538-80b8-f853c9478577"
+    },
+    {
+      "parameters": {
+        "content": "## Setup\n1. Create Data Table `client_briefs` (columns: see docs/data-schema.md) and select it in **Store Brief**.\n2. Google Sheet with tab `briefs` → set its ID in **Append row in sheet**.\n3. Connect Gmail + Google Sheets credentials; set your inbox in **Notify team inbox**.\n4. Activate, then paste the production webhook URL into Tally → Integrations → Webhooks.\n5. Edit `MAP` in **Normalize Tally Fields** to match your question titles.",
+        "height": 300,
+        "width": 520,
+        "color": 5
+      },
+      "id": "91d4e1e7-7461-4648-b72f-759da7a7c9b9",
+      "name": "Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -360
+      ]
+    }
+  ],
+  "connections": {
+    "Tally Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Tally Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Tally Fields": {
+      "main": [
+        [
+          {
+            "node": "Store Brief",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Brief": {
+      "main": [
+        [
+          {
+            "node": "Notify team inbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [],
+  "description": "Receives Tally brief answers, normalizes them to English keys, stores them and e-mails the team with Reply-To set to the client."
+}

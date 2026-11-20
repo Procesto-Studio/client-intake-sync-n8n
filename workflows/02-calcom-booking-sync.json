@@ -1,0 +1,159 @@
+{
+  "name": "Client intake · Cal.com booking → same client row",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "client-intake-booking",
+        "options": {
+          "noResponseBody": true
+        }
+      },
+      "id": "03722a95-3c20-4b3b-9c68-454984f54507",
+      "name": "Cal.com Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "61b6468f-f500-49c8-92aa-7e8286c28311"
+    },
+    {
+      "parameters": {
+        "jsCode": "const map = { BOOKING_CREATED: 'заброньовано', BOOKING_RESCHEDULED: 'перенесено', BOOKING_CANCELLED: 'скасовано' };\nconst out = [];\nfor (const item of $input.all()) {\n  const b = item.json.body || {};\n  const p = b.payload || {};\n  const a = (p.attendees || [])[0] || {};\n  // ignore PING and any other events, and payloads without an attendee e-mail\n  if (!map[b.triggerEvent] || !a.email) continue;\n  out.push({ json: {\n    email: a.email,\n    name: a.name || '',\n    booking_start: p.startTime || null,\n    booking_status: map[b.triggerEvent],\n    booking_meet_url: (p.metadata && p.metadata.videoCallUrl) || (p.videoCallData && p.videoCallData.url) || p.location || '',\n    booking_uid: p.uid || '',\n  } });\n}\nreturn out;"
+      },
+      "id": "6fe227a5-31b2-4ba1-b5d6-5b1d9702ceb0",
+      "name": "Normalize Booking",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_DATA_TABLE_ID",
+          "cachedResultName": "client_briefs"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "keyValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "17fc79fb-4557-4d19-8e7f-31d9ca28e3ef",
+      "name": "Upsert Booking",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "bookings"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "b99d9b7d-feae-4caa-ad6b-bf1f81e81509",
+      "name": "Append row in sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Setup\n1. Select the same Data Table `client_briefs` in **Upsert Booking**.\n2. Google Sheet tab `bookings` → set its ID in **Append row in sheet**.\n3. Activate, then add the production webhook URL in Cal.com → Settings → Developer → Webhooks (events: created, rescheduled, cancelled).",
+        "height": 240,
+        "width": 480,
+        "color": 5
+      },
+      "id": "12e12824-da2a-49e8-8fbb-9720b9ab5607",
+      "name": "Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -320
+      ]
+    }
+  ],
+  "connections": {
+    "Cal.com Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Booking": {
+      "main": [
+        [
+          {
+            "node": "Upsert Booking",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [],
+  "description": "Receives Cal.com booking events and writes date, status and meeting link into the client's row, matched by e-mail."
+}
