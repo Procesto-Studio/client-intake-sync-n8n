@@ -28,7 +28,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        224,
+        250,
         0
       ]
     },
@@ -64,7 +64,7 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        448,
+        500,
         -48
       ]
     },
@@ -96,24 +96,72 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        448,
+        500,
         112
       ]
     },
     {
       "parameters": {
-        "content": "## Setup\n1. Select the same Data Table `client_briefs` in **Upsert Booking**.\n2. Google Sheet tab `bookings` → set its ID in **Append row in sheet**.\n3. Activate, then add the production webhook URL in Cal.com → Settings → Developer → Webhooks (events: created, rescheduled, cancelled).",
-        "height": 240,
-        "width": 480,
-        "color": 5
+        "content": "### Booking event\nCal.com calls this URL when a call is booked, moved or cancelled.",
+        "height": 432,
+        "width": 230,
+        "color": 4
       },
-      "id": "12e12824-da2a-49e8-8fbb-9720b9ab5607",
-      "name": "Setup",
+      "id": "fdfcb804-21c1-4a4f-88f4-a9ec69974a8f",
+      "name": "Note: Cal.com Webhook",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -80,
-        -320
+        -50,
+        -282
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Clean booking data\nE-mail, start time, status and meeting link in fixed field names, whatever the event type.",
+        "height": 432,
+        "width": 230,
+        "color": 4
+      },
+      "id": "af2629a2-51b8-43b6-96bd-3537b9c925c1",
+      "name": "Note: Normalize Booking",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        200,
+        -282
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Update the client record\nUpserts by e-mail, so the brief and the call live in one row. Every event is also logged to Sheets.",
+        "height": 544,
+        "width": 230,
+        "color": 4
+      },
+      "id": "9e8b65dd-91ea-4047-ab41-bc8084c78819",
+      "name": "Note: Upsert Booking",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        450,
+        -282
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Cal.com booking → same client record\n\n### How it works\n1. **Cal.com webhook** receives booking events: created, rescheduled, cancelled.\n2. A Code node normalizes the payload: attendee e-mail, start time, status, meeting link.\n3. **Upsert Booking** writes the booking into the client's existing row in the Data Table, matched by e-mail.\n4. Each event is also appended to the `bookings` tab in Google Sheets as a history.\n\n### Setup\n1. Select the same Data Table `client_briefs` in **Upsert Booking**.\n2. Google Sheet tab `bookings` → set its ID in **Append row in sheet**.\n3. Activate, then add the production webhook URL in Cal.com → Settings → Developer → Webhooks (events: created, rescheduled, cancelled).",
+        "height": 710,
+        "width": 520,
+        "color": 1
+      },
+      "id": "89602df3-878a-44ff-b4dd-699f45390b32",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -610,
+        -282
       ]
     }
   ],

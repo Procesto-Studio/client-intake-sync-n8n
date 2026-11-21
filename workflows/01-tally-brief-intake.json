@@ -29,7 +29,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        224,
+        250,
         0
       ]
     },
@@ -56,7 +56,7 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        448,
+        500,
         -48
       ]
     },
@@ -88,20 +88,20 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        448,
+        500,
         112
       ]
     },
     {
       "parameters": {
-        "sendTo": "team@example.com",
+        "sendTo": "YOUR_TEAM_EMAIL",
         "subject": "={{ (() => { const n = $('Normalize Tally Fields').item.json; return (n.excluded ? '[Бриф · галузь поза фокусом] ' : 'Новий бриф: ') + (n.name || '—') + ' · ' + (n.company || '—') + (n.response_format ? ' · ' + n.response_format : ''); })() }}",
         "emailType": "text",
         "message": "={{ (() => { const n = $('Normalize Tally Fields').item.json; const L = [['Джерело (UTM)','utm'],['Сфера','industry'],['Імʼя','name'],['E-mail','email'],['Компанія','company'],['Сайт','website'],['Команда','team_size'],['Хто обробляє заявки','lead_handler'],['Джерела заявок','lead_sources'],['Заявок на місяць','lead_volume'],['Що покращити','goals'],['Системи','systems'],['Інша CRM','other_crm'],['Задача','task_description'],['Після звернення','process_steps'],['Де дані','data_storage'],['Рішення','interest_solutions'],['Формат співпраці','interest_package'],['Строки','timeline'],['Мова спілкування','contact_language'],['Формат відповіді','response_format'],['Канал дзвінка','call_channel'],['Контакт для дзвінка','call_contact'],['Зручний час','call_time'],['Як дізналися','referral'],['Згода','consent'],['Сторінка сайту (page)','page'],['Самооцінка (readiness)','readiness'],['format / package з кнопки','format']]; const lines = L.map(([t,k]) => { let v = n[k]; if (k === 'consent') v = v ? 'так' : 'ні'; if (k === 'format') v = [n.format, n.package].filter(Boolean).join(' / '); if (k === 'utm') v = [n.utm_source, n.utm_medium, n.utm_campaign, n.utm_content].filter(Boolean).join(' / '); return v === '' || v === undefined || v === null ? null : t + ': ' + v; }).filter(Boolean); return 'Нова відповідь у брифі Tally (UA), ' + n.submitted_at + '\\n' + (n.excluded ? 'Галузь поза фокусом студії — клієнт бачив екран «Дякуємо за інтерес».\\n' : '') + '\\n' + lines.join('\\n') + '\\n\\nУсі відповіді: n8n → Data tables → client_briefs (response_id ' + n.response_id + ').'; })() }}",
         "options": {
           "appendAttribution": false,
           "senderName": "Client brief",
-          "replyTo": "={{ $('Normalize Tally Fields').item.json.email || 'team@example.com' }}"
+          "replyTo": "={{ $('Normalize Tally Fields').item.json.email }}"
         }
       },
       "id": "80e65e7d-2687-440a-981e-311fdeb7f713",
@@ -109,25 +109,89 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        736,
+        788,
         -48
       ],
       "webhookId": "2f80a495-8344-4538-80b8-f853c9478577"
     },
     {
       "parameters": {
-        "content": "## Setup\n1. Create Data Table `client_briefs` (columns: see docs/data-schema.md) and select it in **Store Brief**.\n2. Google Sheet with tab `briefs` → set its ID in **Append row in sheet**.\n3. Connect Gmail + Google Sheets credentials; set your inbox in **Notify team inbox**.\n4. Activate, then paste the production webhook URL into Tally → Integrations → Webhooks.\n5. Edit `MAP` in **Normalize Tally Fields** to match your question titles.",
-        "height": 300,
-        "width": 520,
-        "color": 5
+        "content": "### Brief submitted\nTally sends every submission here. Use the production URL after activating.",
+        "height": 494,
+        "width": 230,
+        "color": 4
       },
-      "id": "91d4e1e7-7461-4648-b72f-759da7a7c9b9",
-      "name": "Setup",
+      "id": "d8f710d5-61b1-48bc-8949-f703daa64e29",
+      "name": "Note: Tally Webhook",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -80,
-        -360
+        -50,
+        -344
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Stable field names\nMaps question titles to English keys via `MAP`, reads hidden fields and UTM tags, flags industries you don't serve.\n\nEdit `MAP` to match your form.",
+        "height": 494,
+        "width": 230,
+        "color": 4
+      },
+      "id": "f034be57-0fe3-4781-a7dd-155b4e44c35e",
+      "name": "Note: Normalize Tally Fields",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        200,
+        -344
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Save\nOne row per client in the Data Table (the source of truth) and a copy in Google Sheets for the team.",
+        "height": 606,
+        "width": 230,
+        "color": 4
+      },
+      "id": "837b4f81-06f9-4f71-a98d-607244293267",
+      "name": "Note: Store Brief",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        450,
+        -344
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Team e-mail\nAll answers in one e-mail. Reply-To is the client, so \"Reply\" goes straight to them.",
+        "height": 446,
+        "width": 230,
+        "color": 4
+      },
+      "id": "7408bc16-4c7e-4ef3-88cd-b8bb755adbab",
+      "name": "Note: Notify team inbox",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        738,
+        -344
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Tally brief → one client record + team e-mail\n\n### How it works\n1. **Tally webhook** receives a brief.\n2. A Code node maps question titles to stable keys and reads hidden fields (page, UTM tags).\n3. The brief is stored in an **n8n Data Table** and copied to **Google Sheets**.\n4. The team gets an **e-mail with every answer**; Reply-To is the client.\n\nThe Cal.com workflow later adds booking data to the same record, matched by e-mail.\n\n### Setup\n1. Create Data Table `client_briefs` (columns: docs/data-schema.md) and select it in **Store Brief**.\n2. Google Sheet with tab `briefs` → set its ID in **Append row in sheet**.\n3. Connect Gmail + Google Sheets; set your inbox in **Notify team inbox**.\n4. Activate, then paste the production webhook URL into Tally → Integrations → Webhooks.",
+        "height": 788,
+        "width": 520,
+        "color": 1
+      },
+      "id": "c703ce46-40cd-4103-8cc7-e9336d349013",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -610,
+        -344
       ]
     }
   ],
